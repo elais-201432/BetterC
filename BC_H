@@ -1,0 +1,542 @@
+#ifndef BC_H
+#define BC_H
+
+#include <cmath>
+#include <conio.h>
+#include <ctime>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <windows.h>
+#include <map>
+#include <fstream>
+using namespace std;
+
+// BCE命名空间，主要涉及一些与错误退出相关的功能，不过目前部分函数用途不太直观，可根据实际需求完善其功能逻辑及注释说明
+namespace BCE {
+    // 用于输出错误信息并终止程序（通过条件编译控制是否触发错误提示）
+    static void exitError() {
+        // 如果notExitCerr未定义，就输出错误信息"Exiting with error"
+        #if (notExitCerr)
+            #error Exiting with error
+        #endif
+    }
+
+    // 定义notExitCerr宏，可能用于控制exitError函数是否输出错误提示（此处用途不太清晰，可添加更详细注释说明）
+    static void NotusedExitError() {
+        #define notExitCerr
+    }
+
+    // 取消notExitCerr宏的定义，恢复到可能的默认状态（同样可补充注释说明具体使用场景）
+    static void UsedExitError() {
+        #undef notExitCerr
+    }
+}
+
+// BCT命名空间，包含了一些与时间、延时和程序退出相关的实用函数
+namespace BCT {
+    // 使程序暂停指定的秒数（将秒数转换为毫秒后调用Sleep函数实现延时）
+    static void Wait(float seconds) {
+        // 把输入的秒数转换为毫秒，因为Windows下的Sleep函数参数是以毫秒为单位
+        seconds *= 1000;
+        // 调用Sleep函数进行延时，将float类型的秒数转换为DWORD类型（无符号长整型）后传入
+        Sleep(static_cast<DWORD>(seconds));
+    }
+
+    // 获取当前的时间戳（从1970年1月1日00:00:00 UTC到当前时刻的秒数）
+    static time_t Now() {
+        std::time_t currentTime = std::time(nullptr);
+        return currentTime;
+    }
+
+    namespace Exit {
+        // 先延时指定的时间（以秒为单位），然后正常退出程序
+        static void waitExit(int time) {
+            BCT::Wait(time);
+            exit(0);
+        }
+    }
+}
+
+// 将十进制整数转换为二进制字符串的函数
+std::string decimalToBinary(int decimal) {
+    std::string binary = "";
+    // 通过不断除以2取余数的方式将十进制转换为二进制
+    while (decimal > 0) {
+        binary = (decimal % 2 == 0 ? "0" : "1") + binary;
+        decimal /= 2;
+    }
+    // 如果最终得到的二进制字符串为空，返回"0"，否则返回转换后的二进制字符串
+    return binary.empty() ? "0" : binary;
+}
+
+// 将十进制整数转换为八进制字符串的函数
+std::string decimalToOctal(int decimal) {
+    std::string octal = "";
+    // 通过不断除以8取余数的方式将十进制转换为八进制
+    while (decimal > 0) {
+        octal = std::to_string(decimal % 8) + octal;
+        decimal /= 8;
+    }
+    // 如果最终得到的八进制字符串为空，返回"0"，否则返回转换后的八进制字符串
+    return octal.empty() ? "0" : octal;
+}
+
+// 将十进制整数转换为十六进制字符串的函数
+std::string decimalToHexadecimal(int decimal) {
+    std::string hexadecimal = "";
+    char hexDigits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+    // 通过不断除以16取余数的方式将十进制转换为十六进制，利用十六进制字符数组构建十六进制字符串
+    while (decimal > 0) {
+        hexadecimal = hexDigits[decimal % 16] + hexadecimal;
+        decimal /= 16;
+    }
+    // 如果最终得到的十六进制字符串为空，返回"0"，否则返回转换后的十六进制字符串
+    return hexadecimal.empty() ? "0" : hexadecimal;
+}
+
+// 生成一个范围在0到max - 1之间的随机整数，注意随机数种子已在程序启动时初始化（initRandomGenerator函数）
+int Random(int max) {
+    return rand() % max;
+}
+// 在程序启动时初始化一次随机数种子，保证每次运行生成不同的随机数序列
+void initRandomGenerator() {
+    srand(static_cast<unsigned int>(time(nullptr)));
+}
+
+// ctd命名空间，封装了一些控制台输入输出相关的便捷函数，对部分函数进行了优化改进
+namespace ctd {
+    // 输出字符串并换行，原函数名cout容易和标准库的std::cout混淆，已重命名为printStr
+    static void printStr(const char* str) {
+        std::cout << str << std::endl;
+    }
+
+    // 获取用户输入一个字符，通过参数传递引用的方式接收输入，避免使用全局变量，提高代码可维护性
+    static void getInput(char& inputChar) {
+        std::cin >> inputChar;
+    }
+
+    // 将传入的字符重置为'\0'，可用于清除之前的输入内容等场景，这里以引用方式操作字符变量
+    static void clearInput(char& inputChar) {
+        inputChar = '\0';
+    }
+
+    // 调用_getch函数获取一个字符输入且不回显（常用于获取单个按键操作等场景）
+    static char getch() {
+        return _getch();
+    }
+
+    // 调用_kbhit函数检测键盘是否有按键按下（常用于非阻塞式键盘输入检测场景）
+    static void kbhit() {
+        _kbhit();
+    }
+
+    // 回车，原函数名endl容易和标准库的std::endl混淆，已重命名为PL
+    static void PL() {cout << endl;}
+
+    //调整打印机的光标位置，传入参数为光标的X坐标和Y坐标
+    static void Pos(int X, int Y) {
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        COORD coord = { X, Y };
+        SetConsoleCursorPosition(hConsole, coord);
+    }
+    // 定义一些颜色和属性的常量，方便后续使用和理解
+    const int C_FOREGROUND_BLACK = 0;
+    const int C_FOREGROUND_BLUE = 1;
+    const int C_FOREGROUND_GREEN = 2;
+    const int C_FOREGROUND_CYAN = 3;  // 蓝绿色，由蓝色和绿色组合而成
+    const int C_FOREGROUND_RED = 4;
+    const int C_FOREGROUND_MAGENTA = 5;  // 紫红色，由红色和蓝色组合而成
+    const int C_FOREGROUND_YELLOW = 6;  // 黄色，由红色和绿色组合而成
+    const int C_FOREGROUND_WHITE = 7;
+    const int C_FOREGROUND_INTENSITY = 8;  // 用于设置前景色（文字颜色）的高强度（加粗效果）
+
+    const int C_BACKGROUND_BLACK = 0;
+    const int C_BACKGROUND_BLUE = 16;
+    const int C_BACKGROUND_GREEN = 32;
+    const int C_BACKGROUND_CYAN = 48;  // 蓝绿色背景
+    const int C_BACKGROUND_RED = 64;
+    const int C_BACKGROUND_MAGENTA = 80;  // 紫红色背景
+    const int C_BACKGROUND_YELLOW = 96;  // 黄色背景
+    const int C_BACKGROUND_WHITE = 112;
+    const int C_BACKGROUND_INTENSITY = 128;  // 用于设置背景色的高强度
+
+    static void Color(int color) {
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        // 使用传入的参数color来设置控制台文本属性
+        SetConsoleTextAttribute(hConsole, color);
+    }
+
+    // 根据不同的操作系统环境清屏，Windows下调用system("cls")，其他环境调用system("clear")
+    static void clear() {
+        #if _WIN32
+            system("cls");
+        #else
+            system("clear");
+    #endif
+    }
+}
+// 数学命名空间，封装了一些常用数学函数，包括基本四则运算、幂运算、三角函数、对数和指数函数、绝对值函数、最大值和最小值函数、余弦相似度函数、单点相关性函数、双曲函数等
+namespace Math {
+    // 基本四则运算函数
+
+    const double pi = 3.14159265358979323846;
+    const double e = 2.71828182845904523536;
+
+    inline double add(double a, double b) {
+        return a + b;
+    }
+
+    inline double subtract(double a, double b) {
+        return a - b;
+    }
+
+    inline double multiply(double a, double b) {
+        return a * b;
+    }
+
+    inline double divide(double a, double b) {
+        if (b == 0) {
+            // 这里可以根据实际需求处理除零错误，比如抛出异常或返回特定值
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return a / b;
+    }
+
+    // 幂运算函数
+    inline double power(double a, double b) {
+        return std::pow(a, b);
+    }
+
+    // 平方根函数
+    inline double squareRoot(double a) {
+        if (a < 0) {
+            // 处理负数的平方根情况，同样可以根据需求处理，这里返回非数字（NaN）
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return std::sqrt(a);
+    }
+
+    // 三角函数相关函数（放在子命名空间内，提高结构清晰度）
+    namespace Trigonometry {
+        inline double sin(double a) {
+            return std::sin(a);
+        }
+
+        inline double cos(double a) {
+            return std::cos(a);
+        }
+
+        inline double tan(double a) {
+            return std::tan(a);
+        }
+
+        inline double asin(double a) {
+            return std::asin(a);
+        }
+
+        inline double acos(double a) {
+            return std::acos(a);
+        }
+
+        inline double atan(double a) {
+            return std::atan(a);
+        }
+    }
+
+    // 对数和指数函数
+    inline double log(double a) {
+        if (a <= 0) {
+            // 处理对数函数的定义域问题，返回非数字（NaN）
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return std::log(a);
+    }
+
+    inline double exp(double a) {
+        return std::exp(a);
+    }
+
+    // 绝对值函数
+    inline double abs(double a) {
+        return std::abs(a);
+    }
+
+    // 最大值和最小值函数（修改函数名，与标准库一致）
+    inline double C_max(double a, double b) {
+        return a > b ? a : b;
+    }
+
+    inline double C_min(double a, double b) {
+        return a < b ? a : b;
+    }
+
+    // 余弦相似度函数
+    inline double cosineSimilarity(double a, double b) {
+        double numerator = a * b;
+        double denominator = std::sqrt(a * a + b * b);
+        if (denominator == 0) {
+            // 处理分母为零的情况，根据需求返回合适的值，这里返回非数字（NaN）
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return numerator / denominator;
+    }
+
+    // 单点相关性函数
+    inline double singlePointCorrelation(double a, double b, double c, double d) {
+        double numerator = (a - b) * (c - d);
+        double denominator = std::sqrt((a - b) * (a - b) + (c - d) * (c - d));
+        if (denominator == 0) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return numerator / denominator;
+    }
+
+    // 双曲函数相关函数（放在子命名空间内）
+    namespace Hyperbolic {
+        inline double sinh(double a) {
+            return std::sinh(a);
+        }
+
+        inline double cosh(double a) {
+            return std::cosh(a);
+        }
+
+        inline double tanh(double a) {
+            return std::tanh(a);
+        }
+
+        inline double asinh(double a) {
+            return std::asinh(a);
+        }
+
+        inline double acosh(double a) {
+            return std::acosh(a);
+        }
+
+        inline double atanh(double a) {
+            return std::atanh(a);
+        }
+    }
+}
+
+//physics
+namespace physics {
+    // 物理常数定义
+    const double c = 299792458.0;  // 真空中的光速
+    const double h = 6.62607015e-34;  // 普朗克常数
+    const double k = 1.380649e-23;  // 玻尔兹曼常数
+    const double NA = 6.02214076e23;  // 阿伏伽德罗常数
+    const double e = 1.602176634e-19;  // 电子电荷量
+    const double me = 9.1093837015e-31;  // 电子质量
+    const double mp = 1.67262192369e-27;  // 质子质量
+    const double mn = 1.67492749804e-27;  // 中子质量
+    const double eps0 = 8.8541878128e-12;  // 真空中的介电常数
+    const double mu0 = 4 * Math::pi * 1e-7;  // 真空中的磁导率
+    const double G = 6.67430e-11;  // 万有引力常数
+    const double R = 8.31446261815324;  // 气体常数
+    const double atm = 101325.0;  // 标准大气压
+    const double g = 9.80665;  // 重力加速度
+
+    // 运动学公式相关函数
+    double displacement(double initialVelocity, double acceleration, double time) {
+        return initialVelocity * time + 0.5 * acceleration * time * time;
+    }
+
+    double finalVelocity(double initialVelocity, double acceleration, double time) {
+        return initialVelocity + acceleration * time;
+    }
+
+    double freeFallDisplacement(double time) {
+        return 0.5 * g * time * time;
+    }
+
+    double freeFallFinalVelocity(double time) {
+        return g * time;
+    }
+
+    // 力学相关函数
+    double force(double mass, double acceleration) {
+        return mass * acceleration;
+    }
+
+    double gravityForce(double mass) {
+        return mass * g;
+    }
+
+    double kineticEnergy(double mass, double velocity) {
+        return 0.5 * mass * velocity * velocity;
+    }
+
+    double potentialEnergy(double mass, double height) {
+        return mass * g * height;
+    }
+
+    // 热力学相关函数（简单示例）
+    double idealGasPressure(double volume, double temperature) {
+        return R * temperature / volume;
+    }
+
+    double idealGasVolume(double pressure, double temperature) {
+        return R * temperature / pressure;
+    }
+
+    double idealGasTemperature(double pressure, double volume) {
+        return pressure * volume / R;
+    }
+}
+
+
+namespace chemistry {
+    // 元素信息结构体
+    struct Element {
+        int atomicNumber;  
+        int electronNumber;  
+        double atomicMass;  
+    };
+
+    const int He = 2;
+    const int Ne = 10;
+    const int Ar = 18;
+    const int Kr = 36;
+    const int Xe = 54;
+    const int Rn = 86;
+    const int Li = 3;
+    const int Be = 4;
+    const int B = 5;
+    const int C = 6;
+    const int N = 7;
+    const int O = 8;
+    const int F = 9;
+    const int Na = 11;
+    const int Mg = 12;
+    const int Al = 13;
+    const int Si = 14;
+    const int P = 15;
+    const int S = 16;
+    const int Cl = 17;
+    const int K = 19;
+    const int Ca = 20;
+
+    namespace Chemistry {
+        // 元素信息数组
+        Element elements[] = {
+            {He, He, 4.002602},  
+            {Ne, Ne, 20.1797},  
+            {Ar, Ar, 39.948},  
+            {Kr, Kr, 83.798},  
+            {Xe, Xe, 131.293},  
+            {Rn, Rn, 222.0176},  
+            {Li, 3, 6.941},  
+            {Be, 4, 9.012182},  
+            {B, 5, 10.811},  
+            {C, 6, 12.0107},  
+            {N, 7, 14.0067},  
+            {O, 8, 15.9994},  
+            {F, 9, 18.9984032},  
+            {Na, 11, 22.98976928},  
+            {Mg, 12, 24.305},  
+            {Al, 13, 26.9815386},  
+            {Si, 14, 28.0855},  
+            {P, 15, 30.973762},  
+            {S, 16, 32.065},  
+            {Cl, 17, 35.453},  
+            {K, 19, 39.0983},  
+            {Ca, 20, 40.078},  
+        };
+    }
+}
+
+
+namespace betterPtr {
+
+    typedef int* IntPtr;
+    typedef double* DoublePtr;
+    typedef char* CharPtr;
+    typedef void* VoidPtr;
+
+    // 定义智能指针类，用于管理动态申请的内存，并提供统一的接口访问其内容
+    template<typename T>
+    class SmartPtr {
+    public:
+        // 构造函数，默认构造函数，默认构造的智能指针为空
+        SmartPtr() : ptr(nullptr) {}
+
+        // 构造函数，接受一个指针作为参数，构造一个智能指针，并管理这个指针
+        SmartPtr(T* p) : ptr(p) {}
+
+        // 析构函数，释放管理的指针
+        ~SmartPtr() {
+            if (ptr) {
+                delete ptr;
+            }
+        }
+
+        // 重载取地址操作符，返回管理的指针
+        T* operator->() const {
+            return ptr;
+        }
+
+        // 重载取值操作符，返回管理的指针指向的值
+        T& operator*() const {
+            return *ptr;
+        }
+
+        // 重载赋值操作符，接受一个指针作为参数，释放当前管理的指针，并管理这个指针
+        SmartPtr& operator=(T* p) {
+            if (ptr) {
+                delete ptr;
+            }
+            ptr = p;
+            return *this;
+        }
+
+        // 重载取值操作符，返回管理的指针是否为空
+        operator bool() const {
+            return ptr!= nullptr;
+        }
+
+    private:
+        T* ptr;  // 管理的指针
+    };
+}
+
+namespace betterType {
+    // 定义一个结构体，用于表示三维向量
+    typedef struct {
+        double x, y, z;
+    } Vector3D;
+
+    // 定义一个结构体，用于表示四维向量
+    typedef struct  {
+        double x, y, z, w;
+    } Vector4D;
+     
+    // 定义一个结构体，用于表示二维矩形
+    typedef struct {
+        double width, height;
+    }Rectangle;
+
+    // 定义一个结构体，用于表示三维矩形
+    typedef struct{
+        double width, height, depth;
+    }Cube;
+
+    // 定义一个结构体，用于表示三维矩阵
+    typedef struct {
+        double m11, m12, m13;
+        double m21, m22, m23;
+        double m31, m32, m33;
+    } Matrix3D;
+
+    // 定义一个结构体，用于表示四维矩阵
+    typedef struct {
+        double m11, m12, m13, m14;
+        double m21, m22, m23, m24;
+        double m31, m32, m33, m34;
+        double m41, m42, m43, m44;
+    }Matrix4D;
+}
+
+
+#endif
